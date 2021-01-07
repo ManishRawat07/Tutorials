@@ -17,5 +17,5 @@ TimeSeriesML:
   * stock_prediction.py contains the code to load data from yahoo finance.  The adjusted closing price is mainly used.  Note that the process should always be to augment raw data with SME data.  To demonstrate this, the open/close/high/low price is augmented with SME metrics of various rolling average periods, bollinger bands, MACD, Momentum, exponential moving average, and simple short term SME price forecasts.
    * The code can be used by typing "python train.py TICKER_SYMBOL days_ahead" to generate a model.  For example, a 20 trading day (4 week) ahead model from CVX can be generate using "python train.py CVX 20".  To obtain the forecast for today use: "python forecast.py CVX 20".  To evaluate the model, use: "python test.py CVX 20".
   
-NLP<_ML:
+NLP_ML:
   * Added Facebook Research examples of how to use the fastText library, both for classification and word embeddings.  For word embeddings, the GenSim implementation is used.
