@@ -7,3 +7,4 @@ Knowledge Graphs:
   
 Quantum:
   * ShorDecrypt contains an example using IBM of how to utilize quantum computing to decrypt RSA keys
+  * Julia contains examples of using Quantum Fourier Transforms and Inverse Quantum Fourier Transforms
