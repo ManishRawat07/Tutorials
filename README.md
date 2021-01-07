@@ -8,3 +8,12 @@ Knowledge Graphs:
 Quantum:
   * ShorDecrypt contains an example using IBM of how to utilize quantum computing to decrypt RSA keys
   * Julia contains examples of using Quantum Fourier Transforms and Inverse Quantum Fourier Transforms
+  
+TimeSeriesML:
+ * StockForecasts has command line options to train, forecast, and evaluate stock forecasts using LSTMs with Tensorflow 2.4
+  * parameters.py contains definitions for the model.  M_STEPS is the number of days back to include in generating a forecast.  This is set at 50 and can be changed.  Each day is a trading day, not a calendar day.  The LOOKUP_STEP is the number of days ahead to forecast.  Currently this is 5, which is 1 week usually.  It's important to shuffle the data and use bi-directional  LSTM cells.  To understand why, change these and compare the forecasts.
+   * The loss function can be specified, but we use custom loss function that is slower, but doubly penalizes the model training when the forecasted stock price moves in the wrong direction.
+   * It's important to use a sigmoid function in the last layer to avoid generating negative forecasts for wildly changing data.
+  * stock_prediction.py contains the code to load data from yahoo finance.  The adjusted closing price is mainly used.  Note that the process should always be to augment raw data with SME data.  To demonstrate this, the open/close/high/low price is augmented with SME metrics of various rolling average periods, bollinger bands, MACD, Momentum, exponential moving average, and simple short term SME price forecasts.
+  * The code can be used by typing "python train.py TICKER_SYMBOL days_ahead" to generate a model.  For example, a 20 trading day (4 week) ahead model from CVX can be generate using "python train.py CVX 20".  To obtain the forecast for today use: "python forecast.py CVX 20".  To evaluate the model, use: "python test.py CVX 20".
+  
