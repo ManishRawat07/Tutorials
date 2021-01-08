@@ -8,6 +8,7 @@ Knowledge Graphs:
 Quantum:
   * ShorDecrypt contains an example using IBM of how to utilize quantum computing to decrypt RSA keys
   * Julia contains examples of using Quantum Fourier Transforms and Inverse Quantum Fourier Transforms
+  * WaveFunction contains examples of finding the probability distribution without many simulations, and a superposition example that can determine outcomes, a powerful capability.
   
 TimeSeriesML:
  * StockForecasts has command line options to train, forecast, and evaluate stock forecasts using LSTMs with Tensorflow 2.4 and a GPU.
