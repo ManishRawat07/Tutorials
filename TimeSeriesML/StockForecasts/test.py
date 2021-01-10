@@ -1,8 +1,10 @@
-from stock_prediction import create_model, load_data, np
+from stock_prediction import create_model, load_data, np, pd
 from parameters import *
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 import sys
+
+pd.options.mode.chained_assignment = None  # default='warn'
 
 # date now
 date_now = time.strftime("%Y-%m")
@@ -90,6 +92,61 @@ def predict(model, data):
         predicted_price = prediction[0][0]
     return predicted_price
 
+def predict_gap(model, data, df2, indexVals):
+    predicted_prices = []
+    for X in range(N_STEPS):
+        # retrieve the last sequence from data
+        last_sequence = data["last_sequence"][-(X+1):]
+        # expand dimension
+        last_sequence = np.expand_dims(last_sequence, axis=0)
+        # get the prediction (scaled from 0 to 1)
+        prediction = model.predict(last_sequence)
+        # get the price (by inverting the scaling)
+        if SCALE:
+            predicted_price = data["column_scaler"]["adjclose"].inverse_transform(prediction)[0][0]
+        else:
+            predicted_price = prediction[0][0]   
+
+        df2.loc[indexVals[X-N_STEPS],'forecast'] = predicted_price
+    return df2
+
+def plot_graph2(test_df, df2):
+    """
+    This function plots true close price along with predicted close price
+    with blue and red colors respectively
+    """
+    plt.figure(figsize=(18,8))
+    plt.title(TICKER+" Stock Price Forecast "+ f"{LOOKUP_STEP}" +" days out", fontsize=16)
+    plt.plot(test_df[f'true_adjclose_{LOOKUP_STEP}'].tail(N_STEPS), c='b')
+    plt.plot(test_df[f'adjclose_{LOOKUP_STEP}'].tail(N_STEPS), c='r')
+    plt.plot(df2['forecast'].tail(LOOKUP_STEP+3), c='r')
+    plt.xlabel("Days")
+    plt.ylabel("Price")
+    plt.legend(["Actual Price", "Predicted Price"])
+    forecast_folder = "forecasts"
+    if not os.path.isdir(forecast_folder):
+        os.mkdir(forecast_folder)
+    filename = os.path.join(forecast_folder, TICKER + "_forecast.png")
+    plt.savefig(filename)
+    #plt.show()    
+    
+def predict_gap_correct(model, data, df2, indexVals, scale_correct):
+    predicted_prices = []
+    for X in range(N_STEPS):
+        # retrieve the last sequence from data
+        last_sequence = data["last_sequence"][-(X+1):]
+        # expand dimension
+        last_sequence = np.expand_dims(last_sequence, axis=0)
+        # get the prediction (scaled from 0 to 1)
+        prediction = model.predict(last_sequence)
+        # get the price (by inverting the scaling)
+        if SCALE:
+            predicted_price = data["column_scaler"]["adjclose"].inverse_transform(prediction)[0][0]
+        else:
+            predicted_price = prediction[0][0]   
+
+        df2.loc[indexVals[X-N_STEPS],'forecast'] = predicted_price * scale_correct
+    return df2
 
 # load the data
 data = load_data(TICKER, N_STEPS, scale=SCALE, split_by_date=SPLIT_BY_DATE, shuffle=SHUFFLE, lookup_step=LOOKUP_STEP, test_size=TEST_SIZE, feature_columns=FEATURE_COLUMNS)
@@ -123,7 +180,7 @@ total_profit = total_buy_profit + total_sell_profit
 # dividing total profit by number of testing samples (number of trades)
 profit_per_trade = total_profit / len(final_df)
 # printing metrics
-print(f"Future price after {LOOKUP_STEP} days is {future_price:.2f}$")
+print(f"Uncorrected future price after {LOOKUP_STEP} days is {future_price:.2f}$")
 print(f"{LOSS} loss:", loss)
 print("Mean Absolute Error:", mean_absolute_error)
 print("Accuracy score:", accuracy_score)
@@ -131,12 +188,32 @@ print("Total buy profit:", total_buy_profit)
 print("Total sell profit:", total_sell_profit)
 print("Total profit:", total_profit)
 print("Profit per trade:", profit_per_trade)
+# Need to correct scalar for plotting prices without actuals
+df2 = data['df'].tail(N_STEPS)
+df2['forecast'] = 0
+
+indexVals = []
+for index in df2.index:
+    indexVals.append(index)    
+future_prices = predict_gap(model, data, df2, indexVals)
+    
+idx = final_df.last_valid_index()
+x1 = df2.loc[idx,'forecast']
+x2 = final_df.iloc[-1][f"adjclose_{LOOKUP_STEP}"]
+scale_correct = x2/x1
+future_prices = predict_gap_correct(model, data, df2, indexVals, scale_correct)
+
+future_price = x1 * scale_correct
+print(f"Future $ price after {LOOKUP_STEP} days is {future_price:.2f}")
+
 # plot true/pred prices graph
-plot_graph(final_df)
-print(final_df.tail(10))
+plot_graph2(final_df, df2)
+# print(final_df.tail(10))
 # save the final dataframe to csv-results folder
 csv_results_folder = "csv-results"
 if not os.path.isdir(csv_results_folder):
     os.mkdir(csv_results_folder)
 csv_filename = os.path.join(csv_results_folder, model_name + ".csv")
+csv_filename_pred = os.path.join(csv_results_folder, model_name + "-pred.csv")
 final_df.to_csv(csv_filename)
+df2.to_csv(csv_filename_pred)

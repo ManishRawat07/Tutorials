@@ -52,7 +52,7 @@ ACTIVATION = "sigmoid"
 BATCH_SIZE = 256000
 EPOCHS = 400
 
-# Chevron stock market
+# Tesla stock market
 TICKER = "CVX"
 ticker_data_filename = os.path.join("data", f"{TICKER}_{date_now}.csv")
 # model name to save, making it as unique as possible based on parameters
