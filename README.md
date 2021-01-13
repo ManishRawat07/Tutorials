@@ -11,6 +11,7 @@ Quantum:
   * WaveFunction contains examples of finding the probability distribution without many simulations, and a superposition example that can determine outcomes, a powerful capability.
   
 TimeSeriesML:
+For beginners, this machine learning mastery blog post is a great primer: https://machinelearningmastery.com/how-to-develop-lstm-models-for-time-series-forecasting/
  * StockForecasts has command line options to train, forecast, and evaluate stock forecasts using LSTMs with Tensorflow 2.4 and a GPU.
    * parameters.py contains definitions for the model.  M_STEPS is the number of days back to include in generating a forecast.  This is set at 50 and can be changed.  Each day is a trading day, not a calendar day.  The LOOKUP_STEP is the number of days ahead to forecast.  Currently this is 5, which is 1 week usually.  It's important to shuffle the data and use bi-directional  LSTM cells.  To understand why, change these and compare the forecasts.
     * The loss function can be specified, but we use custom loss function that is slower, but doubly penalizes the model training when the forecasted stock price moves in the wrong direction.
