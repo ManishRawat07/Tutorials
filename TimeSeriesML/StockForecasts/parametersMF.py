@@ -4,9 +4,9 @@ from tensorflow.keras.layers import LSTM
 
 
 # Window size or the sequence length
-N_STEPS = 50
+N_STEPS = 70
 # Lookup step, 1 is the next day
-LOOKUP_STEP = 5
+LOOKUP_STEP = 60
 
 # whether to scale feature columns & output price as well
 SCALE = True
@@ -23,8 +23,8 @@ split_by_date_str = f"sbd-{int(SPLIT_BY_DATE)}"
 # test ratio size, 0.2 is 20%
 TEST_SIZE = 0.3
 # features to use
-FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low", "close", "psma5", "psma20", "psma50", "psma100", "psma200", "MACD", "momentum"]
-MA_PERIODS = [5, 20, 50, 100, 200]
+FEATURE_COLUMNS =  ["adjclose", "sma100", "sma200", "psma100", "psma200", "MACD", "rsi100", "rsi200"]
+MA_PERIODS = [50, 100, 200]
 # date now
 date_now = time.strftime("%Y-%m")
 

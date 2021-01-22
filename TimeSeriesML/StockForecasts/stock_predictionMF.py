@@ -91,7 +91,7 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     
     # add technical indicators
     for n in ma_periods:
-        # Create Simple Moving Averages
+       # Create Simple Moving Averages
         df['sma'+str(n)] = df['adjclose'].rolling(window=n,min_periods=1).mean()
         # Create delta of SMAs
         df['dsma'+str(n)] = df['sma'+str(n)].diff().fillna(0).astype(float)
@@ -103,27 +103,8 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
         df['rsi'+str(n)] = get_rsi_timeseries(df['sma'+str(n)], n)
         # Create EMA
         df['ema'+str(n)] = df['adjclose'].ewm(span=n).mean()
-        ## Create Bollinger Bands
-        #df['sd'+str(n)] = df['adjclose'].rolling(window=n,min_periods=1).std()
-        #df['sd'+str(n)] = df['sd'+str(n)].fillna(0)
-        #df['upper_band'+str(n)] = (df['sma'+str(n)] + (df['sd'+str(n)]*2)) - df['adjclose']
-        #df['lower_band'+str(n)] = df['adjclose'] - (df['sma'+str(n)] - (df['sd'+str(n)]*2))
-    df['26ema'] = df['adjclose'].ewm(span=26).mean()
-    df['12ema'] =  df['adjclose'].ewm(span=12).mean()
-    df['9ema'] =  df['adjclose'].ewm(span=9).mean()
-    df['MACD'] = (df['12ema']-df['26ema'])
+    df['MACD'] = (df['ema200']-df['ema100'])
     
-    # Create Bollinger Bands
-    df['20sd'] = df['adjclose'].rolling(window=20,min_periods=1).std()
-    df['20sd'] = df['20sd'].fillna(0)
-    df['upper_band'] = (df['sma20'] + (df['20sd']*2)) - df['adjclose']
-    df['lower_band'] = df['adjclose'] - (df['sma20'] - (df['20sd']*2))
-    
-    # Create Momentum
-    df['dprice'] = df['adjclose'].diff().fillna(0).astype(float) 
-    df['dvolume'] = df['volume'].diff().fillna(0).astype(float)
-    df['momentum'] = (df['dprice'] * df['dvolume'])
-
     # add date as a column
     if "date" not in df.columns:
         df["date"] = df.index

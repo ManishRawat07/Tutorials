@@ -1,6 +1,6 @@
 import os
 from os import path
-from parameters import *
+from parametersMF import *
 import sys
 import pandas as pd
 
@@ -15,7 +15,7 @@ if len(sys.argv) > 2:
     ticker_data_filename = os.path.join("data", f"{TICKER}_{date_now}.csv")
 
 if not path.exists(os.path.join("results", model_name) + ".h5"):
-    from stock_prediction import create_model, load_data
+    from stock_predictionMF import create_model, load_data
     from tensorflow.keras.layers import LSTM
     from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
     import tensorflow as tf
@@ -39,7 +39,7 @@ if not path.exists(os.path.join("results", model_name) + ".h5"):
     data["df"].to_csv(ticker_data_filename)
     
     # construct the model
-    model = create_model(n_steps=N_STEPS, n_features=len(FEATURE_COLUMNS), loss=LOSS, units=UNITS, cell=CELL, n_layers=N_LAYERS,
+    model = create_model(sequence_length=N_STEPS, n_features=len(FEATURE_COLUMNS), loss=LOSS, units=UNITS, cell=CELL, n_layers=N_LAYERS,
                         dropout=DROPOUT, optimizer=OPTIMIZER, bidirectional=BIDIRECTIONAL, activation=ACTIVATION)
     
     # some tensorflow callbacks

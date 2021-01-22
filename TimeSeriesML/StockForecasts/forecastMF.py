@@ -1,6 +1,6 @@
-from parameters import *
+from parametersMF import *
 import sys
-from stock_prediction import pd
+from stock_predictionMF import pd
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -19,7 +19,7 @@ if not path.exists(os.path.join("results", model_name) + ".h5"):
     print("Model not found: .\\results\\"+model_name)
     quit()
 
-from stock_prediction import create_model, load_data, np
+from stock_predictionMF import create_model, load_data, np
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 
@@ -53,7 +53,7 @@ def predict_gap(model, data, df2, indexVals):
         else:
             predicted_price = prediction[0][0]   
 
-        df2.loc[indexVals[-X],'forecast'] = predicted_price
+        df2.loc[indexVals[X-LOOKUP_STEP],'forecast'] = predicted_price
     return df2
 
 def plot_graph2(test_df, df2):

@@ -1,5 +1,5 @@
-from stock_prediction import create_model, load_data, np, pd
-from parameters import *
+from stock_predictionMF import create_model, load_data, np, pd
+from parametersMF import *
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 import sys
