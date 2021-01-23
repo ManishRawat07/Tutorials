@@ -39,7 +39,7 @@ if not path.exists(os.path.join("results", model_name) + ".h5"):
     data["df"].to_csv(ticker_data_filename)
     
     # construct the model
-    model = create_model(n_steps=N_STEPS, n_features=len(FEATURE_COLUMNS), loss=LOSS, units=UNITS, cell=CELL, n_layers=N_LAYERS,
+    model = create_model(sequence_length=N_STEPS, n_features=len(FEATURE_COLUMNS), loss=LOSS, units=UNITS, cell=CELL, n_layers=N_LAYERS,
                         dropout=DROPOUT, optimizer=OPTIMIZER, bidirectional=BIDIRECTIONAL, activation=ACTIVATION)
     
     # some tensorflow callbacks
