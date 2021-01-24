@@ -30,7 +30,7 @@ date_now = time.strftime("%Y-%m")
 
 ### model parameters
 
-N_LAYERS = 4
+N_LAYERS = 3
 # LSTM cell
 CELL = LSTM
 # 256 LSTM neurons

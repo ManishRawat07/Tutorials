@@ -81,7 +81,7 @@ def predict(model, data):
 
 def predict_gap(model, data, df2, indexVals):
     predicted_prices = []
-    for X in range(LOOKUP_STEP+1):
+    for X in range(LOOKUP_STEP):
         # retrieve the last sequence from data
         last_sequence = data["last_sequence"][-N_STEPS-X:]
         last_sequence = last_sequence[:N_STEPS]
@@ -95,7 +95,7 @@ def predict_gap(model, data, df2, indexVals):
         else:
             predicted_price = prediction[0][0]   
 
-        df2.loc[indexVals[X-LOOKUP_STEP],'forecast'] = predicted_price
+        df2.loc[indexVals[-X],'forecast'] = predicted_price
     return df2
     
 def plot_graph(test_df):
@@ -128,7 +128,7 @@ def plot_graph2(test_df, df2):
     plt.title(TICKER+" Stock Price Forecast "+ f"{LOOKUP_STEP}" +" days out", fontsize=16)
     plt.plot(test_df[f'true_adjclose_{LOOKUP_STEP}'].tail(N_STEPS), c='b')
     plt.plot(test_df[f'adjclose_{LOOKUP_STEP}'].tail(N_STEPS), c='r')
-    plt.plot(df2['forecast'].tail(LOOKUP_STEP+1), c='r')
+    plt.plot(df2['forecast'].tail(LOOKUP_STEP-1), c='r')
     plt.xlabel("Days")
     plt.ylabel("Price")
     plt.legend(["Actual Price", "Predicted Price"])
@@ -180,7 +180,7 @@ print("Total sell profit:", total_sell_profit)
 print("Total profit:", total_profit)
 print("Profit per trade:", profit_per_trade)
 
-df2 = data['df'].tail(LOOKUP_STEP+1)
+df2 = data['df'].tail(LOOKUP_STEP)
 df2['forecast'] = 0
 
 indexVals = []
