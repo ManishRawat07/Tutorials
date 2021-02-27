@@ -1,14 +1,19 @@
 from parametersMF import *
 import sys
 from stock_predictionMF import pd
+import contextlib
 
 pd.options.mode.chained_assignment = None  # default='warn'
+DAYS_BEFORE_LOOKUP = 0
+HALF_LOOKUP_STEP = 0
+HALF_LOOKUP_STEP_PRICE = 0
 
 # date now
 date_now = time.strftime("%Y-%m")
 if len(sys.argv) > 2:
     TICKER = sys.argv[1]
     LOOKUP_STEP = int(sys.argv[2])
+    HALF_LOOKUP_STEP = int(LOOKUP_STEP/2)
     model_name = f"{date_now}_{TICKER}-{shuffle_str}-{scale_str}-{split_by_date_str}-{LOSS}-{OPTIMIZER}-{CELL.__name__}-seq-{N_STEPS}-step-{LOOKUP_STEP}-layers-{N_LAYERS}-units-{UNITS}-activation-{ACTIVATION}"
     if BIDIRECTIONAL:
         model_name += "-b"
@@ -39,7 +44,7 @@ def predict(model, data):
 
 def predict_gap(model, data, df2, indexVals):
     predicted_prices = []
-    for X in range(LOOKUP_STEP+1):
+    for X in range(LOOKUP_STEP):
         # retrieve the last sequence from data
         last_sequence = data["last_sequence"][-N_STEPS-X:]
         last_sequence = last_sequence[:N_STEPS]
@@ -53,8 +58,10 @@ def predict_gap(model, data, df2, indexVals):
         else:
             predicted_price = prediction[0][0]   
 
-        df2.loc[indexVals[X-LOOKUP_STEP],'forecast'] = predicted_price
-    return df2
+        df2.loc[indexVals[-X],'forecast'] = predicted_price
+        if X == HALF_LOOKUP_STEP:
+            HALF_LOOKUP_STEP_PRICE = predicted_price
+    return df2, HALF_LOOKUP_STEP_PRICE
 
 def plot_graph2(test_df, df2):
     """
@@ -62,10 +69,10 @@ def plot_graph2(test_df, df2):
     with blue and red colors respectively
     """
     plt.figure(figsize=(18,8))
-    plt.title(TICKER+" Stock Price Forecast "+ f"{LOOKUP_STEP}" +" days out", fontsize=16)
+    plt.title(TICKER+" Mutual Fund Price Forecast "+ f"{LOOKUP_STEP}" +" days out", fontsize=16)
     plt.plot(test_df[f'true_adjclose_{LOOKUP_STEP}'].tail(N_STEPS), c='b')
     plt.plot(test_df[f'adjclose_{LOOKUP_STEP}'].tail(N_STEPS), c='r')
-    plt.plot(df2['forecast'].tail(LOOKUP_STEP+1), c='r')
+    plt.plot(df2['forecast'].tail(LOOKUP_STEP-1), c='r')
     plt.xlabel("Days")
     plt.ylabel("Price")
     plt.legend(["Actual Price", "Predicted Price"])
@@ -73,6 +80,8 @@ def plot_graph2(test_df, df2):
     if not os.path.isdir(forecast_folder):
         os.mkdir(forecast_folder)
     filename = os.path.join(forecast_folder, TICKER.lower() + "_" + f"{LOOKUP_STEP}" + "_forecast.png")
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(filename)
     plt.savefig(filename)
     #plt.show()    
    
@@ -140,16 +149,17 @@ model.load_weights(model_path)
 # Need to correct scalar for plotting prices without actuals
 # get the final dataframe for the testing set
 final_df = get_final_df(model, data)
-df2 = data['df'].tail(LOOKUP_STEP+1)
+df2 = data['df'].tail(LOOKUP_STEP+DAYS_BEFORE_LOOKUP)
 df2['forecast'] = 0
 
 indexVals = []
 for index in df2.index:
     indexVals.append(index)    
-future_prices = predict_gap(model, data, df2, indexVals)
+future_prices, HALF_LOOKUP_STEP_PRICE = predict_gap(model, data, df2, indexVals)
     
 future_price = predict(model, data)
 print(f"Future $ price after {LOOKUP_STEP} days is {future_price:.2f}")
+print(f"Future $ price after {HALF_LOOKUP_STEP} days is {HALF_LOOKUP_STEP_PRICE:.2f}")
 
 
 # plot true/pred prices graph

@@ -1,4 +1,5 @@
 import argparse
+import string
 import numpy as np
 import pandas as pd
 from yahoo_fin import stock_info as si
@@ -17,42 +18,46 @@ args = CLI.parse_args()
 # access CLI options
 #print("listMFs: %r" % args.mfs)
 
-TICKERS = args.mfs
-def load_data(TICKERS):
+TICKERS = []
+tickers = args.mfs
+def load_data(tickers):
     out = []
     
-    for TICKER in TICKERS:
-        """
-        Loads data from Yahoo Finance source, as well as scaling, shuffling, normalizing and splitting.
-        Params:
-            ticker (str/pd.DataFrame): the ticker you want to load, examples include AAPL, TESL, etc.
-            n_steps (int): the historical sequence length (i.e window size) used to predict, default is 50
-            scale (bool): whether to scale prices from 0 to 1, default is True
-            shuffle (bool): whether to shuffle the data, default is True
-            lookup_step (int): the future lookup step to predict, default is 1 (e.g next day)
-            test_size (float): ratio for test data, default is 0.2 (20% testing data)
-            feature_columns (list): the list of features to use to feed into the model, default is everything grabbed from yahoo_fin
-        """
-        # see if ticker is already a loaded stock from yahoo finance
-        # load it from yahoo_fin library
-        df = si.get_data(TICKER, start_date = "01/01/2016")
-        
-        # add date as a column
-        if "date" not in df.columns:
-            df["date"] = df.index
-        
-        #print(df)
-        cols = [(col, TICKER) for col in df.columns]
-        df.columns = pd.MultiIndex\
-                      .from_tuples(cols,
-                                   names=['Attributes', 'Symbols'] )
-        out.append(df)
+    for TICKERL in tickers:
+        LTICKER = TICKERL.split()
+        for TICKER in LTICKER:
+            TICKERS.append(TICKER)
+            """
+            Loads data from Yahoo Finance source, as well as scaling, shuffling, normalizing and splitting.
+            Params:
+                ticker (str/pd.DataFrame): the ticker you want to load, examples include AAPL, TESL, etc.
+                n_steps (int): the historical sequence length (i.e window size) used to predict, default is 50
+                scale (bool): whether to scale prices from 0 to 1, default is True
+                shuffle (bool): whether to shuffle the data, default is True
+                lookup_step (int): the future lookup step to predict, default is 1 (e.g next day)
+                test_size (float): ratio for test data, default is 0.2 (20% testing data)
+                feature_columns (list): the list of features to use to feed into the model, default is everything grabbed from yahoo_fin
+            """
+            # see if ticker is already a loaded stock from yahoo finance
+            # load it from yahoo_fin library
+            df = si.get_data(TICKER, start_date = "01/01/2016")
+            
+            # add date as a column
+            if "date" not in df.columns:
+                df["date"] = df.index
+            
+            #print(df)
+            cols = [(col, TICKER) for col in df.columns]
+            df.columns = pd.MultiIndex\
+                        .from_tuples(cols,
+                                    names=['Attributes', 'Symbols'] )
+            out.append(df)
     
     df1 = pd.concat(out, axis=1)
     return df1
 
 # Import data
-df = load_data(TICKERS)
+df = load_data(tickers)
 df=df.dropna()
 
 # Closing price
@@ -122,7 +127,7 @@ min_vol_port = portfolios.iloc[portfolios['Volatility'].idxmin()]
 #plt.scatter(min_vol_port[1], min_vol_port[0], color='r', marker='*', s=500)
 
 # Finding the optimal portfolio
-rf = 0.157 # risk factor
+rf = 0.007 # risk factor
 optimal_risky_port = portfolios.iloc[((portfolios['Returns']-rf)/portfolios['Volatility']).idxmax()]
 
 
@@ -132,7 +137,7 @@ for TICKER in TICKERS:
 
 # Plotting optimal portfolio
 plt.figure(figsize=(18,18))
-plt.title("Efficient Fronteir Mutual Fund Analysis ("+allTickers.rstrip()+")", fontsize=16)
+plt.title("Efficient Frontier Mutual Fund Analysis ("+allTickers.rstrip()+")", fontsize=16)
     
 plt.scatter(portfolios['Volatility'], portfolios['Returns'],marker='o', s=10, alpha=0.3)
 plt.scatter(min_vol_port[1], min_vol_port[0], color='r', marker='*', s=500)
