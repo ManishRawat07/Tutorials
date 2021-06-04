@@ -89,6 +89,10 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     else:
         raise TypeError("ticker can be either a str or a `pd.DataFrame` instances")
     
+    #Calculate the On Balance Volume
+    OBV = []
+    OBV.append(0)
+
     # add technical indicators
     for n in ma_periods:
         # Create Simple Moving Averages
@@ -123,6 +127,20 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     df['dprice'] = df['adjclose'].diff().fillna(0).astype(float) 
     df['dvolume'] = df['volume'].diff().fillna(0).astype(float)
     df['momentum'] = (df['dprice'] * df['dvolume'])
+    
+    # On Balance Volume Calcs
+    for i in range(1, len(df.adjclose)):
+        if df.adjclose[i] > df.adjclose[i-1]: #If the closing price is above the prior close price 
+            OBV.append(OBV[-1] + df.volume[i]) #then: Current OBV = Previous OBV + Current Volume
+        elif df.adjclose[i] < df.adjclose[i-1]:
+            OBV.append( OBV[-1] - df.volume[i])
+        else:
+            OBV.append(OBV[-1])
+    #Store the OBV and OBV EMA into new columns
+    df['OBV'] = OBV        
+    df['OBV_SMA50'] = df['OBV'].rolling(window=50,min_periods=1).mean()
+    df['dOBV50'] = df['OBV']-df['OBV_SMA50'].fillna(0).astype(float)
+    df['dcumSumOBV50'] = df['dOBV50'].cumsum().astype(float)
 
     # add date as a column
     if "date" not in df.columns:
