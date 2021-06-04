@@ -128,12 +128,12 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     df['dvolume'] = df['volume'].diff().fillna(0).astype(float)
     df['momentum'] = (df['dprice'] * df['dvolume'])
     
-    # On Balance Volume Calcs
+    # On Balance Volume * Price Calcs
     for i in range(1, len(df.adjclose)):
         if df.adjclose[i] > df.adjclose[i-1]: #If the closing price is above the prior close price 
-            OBV.append(OBV[-1] + df.volume[i]) #then: Current OBV = Previous OBV + Current Volume
+            OBV.append(OBV[-1] + (df.volume[i] * df.adjclose[i])) #then: Current OBV = Previous OBV + Current Volume * Price
         elif df.adjclose[i] < df.adjclose[i-1]:
-            OBV.append( OBV[-1] - df.volume[i])
+            OBV.append( OBV[-1] - (df.volume[i] * df.adjclose[i]))
         else:
             OBV.append(OBV[-1])
     #Store the OBV and OBV EMA into new columns
