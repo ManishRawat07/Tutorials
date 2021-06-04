@@ -23,7 +23,7 @@ split_by_date_str = f"sbd-{int(SPLIT_BY_DATE)}"
 # test ratio size, 0.2 is 20%
 TEST_SIZE = 0.3
 # features to use
-FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low", "close", "psma5", "psma20", "psma50", "psma100", "psma200", "MACD", "momentum"]
+FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low", "close", "psma5", "psma20", "psma50", "psma100", "psma200", "MACD", "momentum", "OBV_SMA50", "OBV", "dcumSumOBV50"]
 MA_PERIODS = [5, 20, 50, 100, 200]
 # date now
 date_now = time.strftime("%Y-%m")
