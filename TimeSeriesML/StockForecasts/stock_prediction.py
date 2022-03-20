@@ -12,7 +12,7 @@ from collections import deque
 import numpy as np
 import pandas as pd
 import random
-
+                        
 # set seed, so we can get the same results after rerunning several times
 np.random.seed(314)
 tf.random.set_seed(314)
@@ -65,9 +65,47 @@ def get_rsi_timeseries(prices, n=1):
         i += 1
 
     return rsi_series
+    
+def tr(data):
+    data['previous_close'] = data['close'].shift(1)
+    data['high-low'] = abs(data['high'] - data['low'])
+    data['high-pc'] = abs(data['high'] - data['previous_close'])
+    data['low-pc'] = abs(data['low'] - data['previous_close'])
+    tr = data[['high-low', 'high-pc', 'low-pc']].max(axis=1)
+    return tr
+
+def atr(data, period):
+    data['tr'] = tr(data)
+    atr = data['tr'].rolling(period).mean()
+    return atr
+    
+def supertrend(df, period=7, atr_multiplier=2.5):
+    hl2 = (df['high'] + df['low']) / 2
+    df['atr'] = atr(df, period)
+    df['upperband'] = hl2 + (atr_multiplier * df['atr'])
+    df['lowerband'] = hl2 - (atr_multiplier * df['atr'])
+    df['in_uptrend'] = 1
+
+    for current in range(1, len(df.index)):
+        previous = current - 1
+
+        if df['close'][current] > df['upperband'][previous]:
+            df['in_uptrend'][current] = 1
+        elif df['close'][current] < df['lowerband'][previous]:
+            df['in_uptrend'][current] = 0
+        else:
+            df['in_uptrend'][current] = df['in_uptrend'][previous]
+
+            if df['in_uptrend'][current] and df['lowerband'][current] < df['lowerband'][previous]:
+                df['lowerband'][current] = df['lowerband'][previous]
+
+            if not df['in_uptrend'][current] and df['upperband'][current] > df['upperband'][previous]:
+                df['upperband'][current] = df['upperband'][previous]
+        
+    return df
 
 def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split_by_date=True,
-                test_size=0.2, feature_columns=['adjclose', 'volume'], ma_periods=[5, 20]):
+                test_size=0.2, feature_columns=['adjclose', 'volume'], ma_periods=[5, 20], endDate="12/31/2070"):
     """
     Loads data from Yahoo Finance source, as well as scaling, shuffling, normalizing and splitting.
     Params:
@@ -82,7 +120,8 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     # see if ticker is already a loaded stock from yahoo finance
     if isinstance(TICKER, str):
         # load it from yahoo_fin library
-        df = si.get_data(TICKER, start_date = "01/01/2016")
+        df = si.get_data(TICKER, start_date = "01/01/2019", end_date=endDate)
+
     elif isinstance(TICKER, pd.DataFrame):
         # already loaded, use it directly
         df = TICKER
@@ -98,13 +137,13 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
         # Create Simple Moving Averages
         df['sma'+str(n)] = df['adjclose'].rolling(window=n,min_periods=1).mean()
         # Create delta of SMAs
-        df['dsma'+str(n)] = df['sma'+str(n)].diff().fillna(0).astype(float)
+        #df['dsma'+str(n)] = df['sma'+str(n)].diff().fillna(0).astype(float)
         # Create acc of SMAs
-        df['asma'+str(n)] = df['dsma'+str(n)].diff().fillna(0).astype(float)
+        #df['asma'+str(n)] = df['dsma'+str(n)].diff().fillna(0).astype(float)
         # Create prediction of SMAs
-        df['psma'+str(n)] = df['sma'+str(n)] + df['dsma'+str(n)] * lookup_step + df['asma'+str(n)] * lookup_step
+        #df['psma'+str(n)] = df['sma'+str(n)] + df['dsma'+str(n)] * lookup_step + df['asma'+str(n)] * lookup_step
         # Create RSI of SMAs
-        df['rsi'+str(n)] = get_rsi_timeseries(df['sma'+str(n)], n)
+        #df['rsi'+str(n)] = get_rsi_timeseries(df['sma'+str(n)], n)
         # Create EMA
         df['ema'+str(n)] = df['adjclose'].ewm(span=n).mean()
         ## Create Bollinger Bands
@@ -112,23 +151,27 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
         #df['sd'+str(n)] = df['sd'+str(n)].fillna(0)
         #df['upper_band'+str(n)] = (df['sma'+str(n)] + (df['sd'+str(n)]*2)) - df['adjclose']
         #df['lower_band'+str(n)] = df['adjclose'] - (df['sma'+str(n)] - (df['sd'+str(n)]*2))
-    df['26ema'] = df['adjclose'].ewm(span=26).mean()
-    df['12ema'] =  df['adjclose'].ewm(span=12).mean()
-    df['9ema'] =  df['adjclose'].ewm(span=9).mean()
-    df['MACD'] = (df['12ema']-df['26ema'])
+    df['7ema'] = df['adjclose'].ewm(span=7).mean()
+    df['26ema'] =  df['adjclose'].ewm(span=25).mean()
+    #df['65ema'] =  df['adjclose'].ewm(span=65).mean()
+    df['MACD'] = (df['7ema'] - df['26ema'])
+    df['MACDS'] = df['MACD'].ewm(span=9).mean()
+    df['MACDD'] = df['MACD'] - df['MACDS']
     
     # Create Bollinger Bands
+    df['sma20'] = df['adjclose'].rolling(window=20,min_periods=1).mean()
     df['20sd'] = df['adjclose'].rolling(window=20,min_periods=1).std()
     df['20sd'] = df['20sd'].fillna(0)
     df['upper_band'] = (df['sma20'] + (df['20sd']*2)) - df['adjclose']
     df['lower_band'] = df['adjclose'] - (df['sma20'] - (df['20sd']*2))
+    df = supertrend(df)
     
     # Create Momentum
     df['dprice'] = df['adjclose'].diff().fillna(0).astype(float) 
     df['dvolume'] = df['volume'].diff().fillna(0).astype(float)
     df['momentum'] = (df['dprice'] * df['dvolume'])
     
-    # On Balance Volume * Price Calcs
+     # On Balance Volume * Price Calcs
     for i in range(1, len(df.adjclose)):
         if df.adjclose[i] > df.adjclose[i-1]: #If the closing price is above the prior close price 
             OBV.append(OBV[-1] + (df.volume[i] * df.adjclose[i])) #then: Current OBV = Previous OBV + Current Volume * Price
@@ -138,9 +181,33 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
             OBV.append(OBV[-1])
     #Store the OBV and OBV EMA into new columns
     df['OBV'] = OBV        
-    df['OBV_SMA50'] = df['OBV'].rolling(window=50,min_periods=1).mean()
-    df['dOBV50'] = df['OBV']-df['OBV_SMA50'].fillna(0).astype(float)
-    df['dcumSumOBV50'] = df['dOBV50'].cumsum().astype(float)
+    df['OBVFast'] = df['OBV'].rolling(window=7,min_periods=1).mean()
+    df['OBVSlow'] = df['OBV'].rolling(window=65,min_periods=1).mean()
+    df['dOBV'] = df['OBVFast'] - df['OBVSlow'].fillna(0).astype(float)
+    df['OBVX'] = df['OBV'].rolling(window=3,min_periods=1).mean()
+    df['OBVY'] = df['OBV'].rolling(window=22,min_periods=1).mean()
+    df['SMAVol20'] = df['volume'].rolling(window=20,min_periods=1).mean()
+    df['SMAFast'] = df['adjclose'].rolling(window=7,min_periods=1).mean()
+    df['SMAMed'] = df['adjclose'].rolling(window=65,min_periods=1).mean()
+    df['SMASlow'] = df['adjclose'].rolling(window=126,min_periods=1).mean()
+    df['dSMAFS'] = df['SMAFast'] - df['SMASlow'].fillna(0).astype(float)
+    df['cumSumOBVFastSlow'] = df['dOBV'].cumsum().astype(float)
+    df['dCumSumOBVFastSlow'] = df['cumSumOBVFastSlow'].diff().fillna(0).astype(float)
+    df['perc1c2']=df['adjclose'].shift(1) / df['adjclose'].shift(2)
+    df['dCO']=df['close'] - df['open']
+    df['percc1']=df['adjclose']/df['adjclose'].shift(1).fillna(0).astype(float)
+    df['YTDPer']=df['adjclose'] /df['adjclose'].shift(252).fillna(0).astype(float)
+    df['ROC5']=df['adjclose'] /df['adjclose'].shift(5).fillna(0).astype(float)
+    df['ROC10']=df['adjclose'] /df['adjclose'].shift(10).fillna(0).astype(float)
+    df['ROC25']=df['adjclose'] /df['adjclose'].shift(25).fillna(0).astype(float)
+    #df['dSFastSMed'] = df['SMAFast'] - df['SMAMed'].fillna(0).astype(float)
+    df['MDT']=df['adjclose'] /df['SMASlow'] 
+    #df['MDT25']=df['MDT'].shift(25)
+    df['NC'] = abs(df['adjclose'] - df['adjclose'].shift(1));
+    df['LIN'] = abs(((df['adjclose'].shift(2) - df['adjclose']) / 2.0) / (df['adjclose'].shift(1) - df['adjclose']))
+    df['LIN25'] = df['LIN'].rolling(window=25,min_periods=1).mean()
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    df = df.fillna(0)
 
     # add date as a column
     if "date" not in df.columns:
@@ -172,7 +239,7 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
 
     # last `lookup_step` columns contains NaN in future column
     # get them before droping NaNs
-    last_sequence = np.array(df[feature_columns].tail(lookup_step))
+    last_sequence = np.array(df[feature_columns].tail(lookup_step*12))
     
     # drop NaNs
     df.dropna(inplace=True)

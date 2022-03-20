@@ -23,8 +23,8 @@ split_by_date_str = f"sbd-{int(SPLIT_BY_DATE)}"
 # test ratio size, 0.2 is 20%
 TEST_SIZE = 0.3
 # features to use
-FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low", "close", "psma5", "psma20", "psma50", "psma100", "psma200", "MACD", "momentum", "OBV_SMA50", "OBV", "dcumSumOBV50"]
-MA_PERIODS = [5, 20, 50, 100, 200]
+FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low", "close", "OBV", "SMAFast", "SMASlow", "ROC10", "ROC25", "perc1c2"]
+MA_PERIODS = [7, 20, 50]
 # date now
 date_now = time.strftime("%Y-%m")
 
@@ -34,7 +34,7 @@ N_LAYERS = 4
 # LSTM cell
 CELL = LSTM
 # 256 LSTM neurons
-UNITS = 64
+UNITS = 32
 # 40% dropout
 DROPOUT = 0.4
 # whether to use bidirectional RNNs
