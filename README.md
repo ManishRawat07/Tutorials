@@ -9,6 +9,7 @@ Quantum:
   * ShorDecrypt contains an example using IBM of how to utilize quantum computing to decrypt RSA keys
   * Julia contains examples of using Quantum Fourier Transforms and Inverse Quantum Fourier Transforms
   * WaveFunction contains examples of finding the probability distribution without many simulations, and a superposition example that can determine outcomes, a powerful capability.
+  * QuantumGraph has an example of modeling a quantum knowledge graph using 5 Qubits in a butterfly structure.
   
 TimeSeriesML:
 For beginners, this machine learning mastery blog post is a great primer: https://machinelearningmastery.com/how-to-develop-lstm-models-for-time-series-forecasting/
