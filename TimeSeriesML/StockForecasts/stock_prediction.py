@@ -18,8 +18,8 @@ import random
 import pypyodbc
 cnxn = pypyodbc.connect("Driver={SQL Server Native Client 11.0};"
                         "Server=127.0.0.1;"
-                        "Database=StockTitan;"
-                        "uid=stockTitans;pwd=admin!75")
+                        "Database=database;"
+                        "uid=username;pwd=password")
                         
 # set seed, so we can get the same results after rerunning several times
 np.random.seed(314)
