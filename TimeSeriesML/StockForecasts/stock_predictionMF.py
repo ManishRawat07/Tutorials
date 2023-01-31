@@ -82,7 +82,7 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     # see if ticker is already a loaded stock from yahoo finance
     if isinstance(TICKER, str):
         # load it from yahoo_fin library
-        df = si.get_data(TICKER, start_date = "01/01/2016")
+        df = si.get_data(TICKER, start_date = "01/01/2018")
     elif isinstance(TICKER, pd.DataFrame):
         # already loaded, use it directly
         df = TICKER

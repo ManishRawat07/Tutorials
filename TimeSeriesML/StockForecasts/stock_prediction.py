@@ -15,11 +15,6 @@ warnings.filterwarnings('ignore')
 import numpy as np
 import pandas as pd
 import random
-import pypyodbc
-cnxn = pypyodbc.connect("Driver={SQL Server Native Client 11.0};"
-                        "Server=127.0.0.1;"
-                        "Database=database;"
-                        "uid=username;pwd=password")
                         
 # set seed, so we can get the same results after rerunning several times
 np.random.seed(314)
@@ -137,17 +132,7 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     # see if ticker is already a loaded stock from yahoo finance
     if isinstance(TICKER, str):
         # load it from yahoo_fin library
-        # df = si.get_data(TICKER, start_date = "01/01/2020", end_date=endDate)
-        query = "SELECT [date_time] as date_time, round([price_open]/100.0, 2) as [open], round([price_high]/100.0, 2) as [high],  round([price_low]/100.0, 2) as [low],  round([price_close]/100.0, 2) as [close],  round([adjClose]/100.0, 2) as [adjclose], [volume], '"+TICKER+"' as ticker  FROM [StockTitan].[st].[daily] where stock_id = (select top(1) stock_id from [st].[stock] where symbol = '"+TICKER+"' and status > 0) and date_time >= getdate() - 821 and date_time <= '"+endDate+"' and volume > 0 and price_close > 0 order by date_time"
-        df = pd.read_sql_query(query, cnxn)
-        df = df.set_index('date_time')
-        df['adjclose'].iloc[-1] = df['close'].iloc[-1]
-        #df['adjclose'].iloc[-2] = df['close'].iloc[-2]
-        #df['adjclose'].iloc[-3] = df['close'].iloc[-3]
-        #df['adjclose'].iloc[-4] = df['close'].iloc[-4]
-        #df['adjclose'].iloc[-5] = df['close'].iloc[-5]
-        df = df[df.adjclose != 0]
-
+        df = si.get_data(TICKER, start_date = "01/01/2018")
     elif isinstance(TICKER, pd.DataFrame):
         # already loaded, use it directly
         df = TICKER
