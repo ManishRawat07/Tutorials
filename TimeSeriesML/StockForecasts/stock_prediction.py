@@ -9,14 +9,31 @@ from sklearn.model_selection import train_test_split
 from yahoo_fin import stock_info as si
 from collections import deque
 
+import warnings
+warnings.filterwarnings('ignore')
+
 import numpy as np
 import pandas as pd
 import random
+import pypyodbc
+cnxn = pypyodbc.connect("Driver={SQL Server Native Client 11.0};"
+                        "Server=127.0.0.1;"
+                        "Database=StockTitan;"
+                        "uid=stockTitans;pwd=admin!75")
                         
 # set seed, so we can get the same results after rerunning several times
 np.random.seed(314)
 tf.random.set_seed(314)
 random.seed(314)
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+  # Restrict TensorFlow to only use the first GPU
+  try:
+    tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
+  except RuntimeError as e:
+    # Visible devices must be set at program startup
+    print(e)
 
 def shuffle_in_unison(a, b):
     # shuffle two arrays in the same way
@@ -120,7 +137,16 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     # see if ticker is already a loaded stock from yahoo finance
     if isinstance(TICKER, str):
         # load it from yahoo_fin library
-        df = si.get_data(TICKER, start_date = "01/01/2019", end_date=endDate)
+        # df = si.get_data(TICKER, start_date = "01/01/2020", end_date=endDate)
+        query = "SELECT [date_time] as date_time, round([price_open]/100.0, 2) as [open], round([price_high]/100.0, 2) as [high],  round([price_low]/100.0, 2) as [low],  round([price_close]/100.0, 2) as [close],  round([adjClose]/100.0, 2) as [adjclose], [volume], '"+TICKER+"' as ticker  FROM [StockTitan].[st].[daily] where stock_id = (select top(1) stock_id from [st].[stock] where symbol = '"+TICKER+"' and status > 0) and date_time >= getdate() - 821 and date_time <= '"+endDate+"' and volume > 0 and price_close > 0 order by date_time"
+        df = pd.read_sql_query(query, cnxn)
+        df = df.set_index('date_time')
+        df['adjclose'].iloc[-1] = df['close'].iloc[-1]
+        #df['adjclose'].iloc[-2] = df['close'].iloc[-2]
+        #df['adjclose'].iloc[-3] = df['close'].iloc[-3]
+        #df['adjclose'].iloc[-4] = df['close'].iloc[-4]
+        #df['adjclose'].iloc[-5] = df['close'].iloc[-5]
+        df = df[df.adjclose != 0]
 
     elif isinstance(TICKER, pd.DataFrame):
         # already loaded, use it directly
@@ -133,9 +159,9 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     OBV.append(0)
 
     # add technical indicators
-    for n in ma_periods:
+    #for n in ma_periods:
         # Create Simple Moving Averages
-        df['sma'+str(n)] = df['adjclose'].rolling(window=n,min_periods=1).mean()
+        #df['sma'+str(n)] = df['adjclose'].rolling(window=n,min_periods=1).mean()
         # Create delta of SMAs
         #df['dsma'+str(n)] = df['sma'+str(n)].diff().fillna(0).astype(float)
         # Create acc of SMAs
@@ -145,26 +171,39 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
         # Create RSI of SMAs
         #df['rsi'+str(n)] = get_rsi_timeseries(df['sma'+str(n)], n)
         # Create EMA
-        df['ema'+str(n)] = df['adjclose'].ewm(span=n).mean()
+        #df['ema'+str(n)] = df['adjclose'].ewm(span=n).mean()
         ## Create Bollinger Bands
         #df['sd'+str(n)] = df['adjclose'].rolling(window=n,min_periods=1).std()
         #df['sd'+str(n)] = df['sd'+str(n)].fillna(0)
         #df['upper_band'+str(n)] = (df['sma'+str(n)] + (df['sd'+str(n)]*2)) - df['adjclose']
         #df['lower_band'+str(n)] = df['adjclose'] - (df['sma'+str(n)] - (df['sd'+str(n)]*2))
-    df['7ema'] = df['adjclose'].ewm(span=7).mean()
-    df['26ema'] =  df['adjclose'].ewm(span=25).mean()
-    #df['65ema'] =  df['adjclose'].ewm(span=65).mean()
-    df['MACD'] = (df['7ema'] - df['26ema'])
-    df['MACDS'] = df['MACD'].ewm(span=9).mean()
-    df['MACDD'] = df['MACD'] - df['MACDS']
+    df['hlc3'] = (df['close'] + df['high'] + df['low']) / 3.0
+    df['sma3'] = df['hlc3'].ewm(span=3).mean()
+    df['ema1'] = df['adjclose'].ewm(span=7).mean()
+    df['ema2'] = df['adjclose'].ewm(span=14).mean()
+    df['ema3'] =  df['adjclose'].ewm(span=21).mean()
+    df['MACD'] = (df['ema1'] - df['ema3'])
+    df['rsi'] = get_rsi_timeseries(df['adjclose'], 14)
+    df['SMArsi'] = df['rsi'].ewm(span=14).mean()
+    df['drsi'] = df['rsi'] - df['SMArsi']
+    #df['MACDS'] = df['MACD'].ewm(span=7).mean()
+    #df['MACDD'] = df['MACD'] - df['MACDS']
     
     # Create Bollinger Bands
     df['sma20'] = df['adjclose'].rolling(window=20,min_periods=1).mean()
-    df['20sd'] = df['adjclose'].rolling(window=20,min_periods=1).std()
-    df['20sd'] = df['20sd'].fillna(0)
-    df['upper_band'] = (df['sma20'] + (df['20sd']*2)) - df['adjclose']
-    df['lower_band'] = df['adjclose'] - (df['sma20'] - (df['20sd']*2))
+    #df['sma7'] = df['adjclose'].rolling(window=7,min_periods=1).mean()
+    #df['sma14'] = df['adjclose'].rolling(window=14,min_periods=1).mean()
+    #df['sma21'] = df['adjclose'].rolling(window=21,min_periods=1).mean()
+    #df['sma30'] = df['adjclose'].rolling(window=30,min_periods=1).mean()
+    #df['20sd'] = df['adjclose'].rolling(window=20,min_periods=1).std()
+    #df['20sd'] = df['20sd'].fillna(0)
+    #df['upper_band'] = (df['sma20'] + (df['20sd']*2)) - df['adjclose']
+    #df['lower_band'] = df['adjclose'] - (df['sma20'] - (df['20sd']*2))
     df = supertrend(df)
+    df['kst'] = df['sma3'] - df['ema1'] + df['sma3'] - df['ema2'] + df['sma3'] - df['ema3']
+    df['wema1'] = df['hlc3'] - df['ema1']
+    df['wema2'] = df['hlc3'] - df['ema2']
+    df['wema3'] = df['hlc3'] - df['ema3']
     
     # Create Momentum
     df['dprice'] = df['adjclose'].diff().fillna(0).astype(float) 
@@ -172,40 +211,24 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
     df['momentum'] = (df['dprice'] * df['dvolume'])
     
      # On Balance Volume * Price Calcs
-    for i in range(1, len(df.adjclose)):
-        if df.adjclose[i] > df.adjclose[i-1]: #If the closing price is above the prior close price 
-            OBV.append(OBV[-1] + (df.volume[i] * df.adjclose[i])) #then: Current OBV = Previous OBV + Current Volume * Price
-        elif df.adjclose[i] < df.adjclose[i-1]:
-            OBV.append( OBV[-1] - (df.volume[i] * df.adjclose[i]))
-        else:
-            OBV.append(OBV[-1])
+    #for i in range(1, len(df.adjclose)):
+    #    if df.adjclose[i] > df.adjclose[i-1]: #If the closing price is above the prior close price 
+    #        OBV.append(OBV[-1] + (df.volume[i] * df.adjclose[i])) #then: Current OBV = Previous OBV + Current Volume * Price
+    #    elif df.adjclose[i] < df.adjclose[i-1]:
+    #        OBV.append( OBV[-1] - (df.volume[i] * df.adjclose[i]))
+    #    else:
+    #        OBV.append(OBV[-1])
     #Store the OBV and OBV EMA into new columns
-    df['OBV'] = OBV        
-    df['OBVFast'] = df['OBV'].rolling(window=7,min_periods=1).mean()
-    df['OBVSlow'] = df['OBV'].rolling(window=65,min_periods=1).mean()
-    df['dOBV'] = df['OBVFast'] - df['OBVSlow'].fillna(0).astype(float)
-    df['OBVX'] = df['OBV'].rolling(window=3,min_periods=1).mean()
-    df['OBVY'] = df['OBV'].rolling(window=22,min_periods=1).mean()
+    #df['OBV'] = OBV        
+    #df['OBVFast'] = df['OBV'].rolling(window=7,min_periods=1).mean()
+    #df['OBVSlow'] = df['OBV'].rolling(window=65,min_periods=1).mean()
+    #df['dOBV'] = df['OBVFast'] - df['OBVSlow'].fillna(0).astype(float)
     df['SMAVol20'] = df['volume'].rolling(window=20,min_periods=1).mean()
-    df['SMAFast'] = df['adjclose'].rolling(window=7,min_periods=1).mean()
-    df['SMAMed'] = df['adjclose'].rolling(window=65,min_periods=1).mean()
-    df['SMASlow'] = df['adjclose'].rolling(window=126,min_periods=1).mean()
-    df['dSMAFS'] = df['SMAFast'] - df['SMASlow'].fillna(0).astype(float)
-    df['cumSumOBVFastSlow'] = df['dOBV'].cumsum().astype(float)
-    df['dCumSumOBVFastSlow'] = df['cumSumOBVFastSlow'].diff().fillna(0).astype(float)
+    df['volmom'] = df['volume'] -  df['SMAVol20']
+    #df['dEMAFS'] = df['7ema'] - df['21ema'].fillna(0).astype(float)
     df['perc1c2']=df['adjclose'].shift(1) / df['adjclose'].shift(2)
-    df['dCO']=df['close'] - df['open']
     df['percc1']=df['adjclose']/df['adjclose'].shift(1).fillna(0).astype(float)
-    df['YTDPer']=df['adjclose'] /df['adjclose'].shift(252).fillna(0).astype(float)
-    df['ROC5']=df['adjclose'] /df['adjclose'].shift(5).fillna(0).astype(float)
     df['ROC10']=df['adjclose'] /df['adjclose'].shift(10).fillna(0).astype(float)
-    df['ROC25']=df['adjclose'] /df['adjclose'].shift(25).fillna(0).astype(float)
-    #df['dSFastSMed'] = df['SMAFast'] - df['SMAMed'].fillna(0).astype(float)
-    df['MDT']=df['adjclose'] /df['SMASlow'] 
-    #df['MDT25']=df['MDT'].shift(25)
-    df['NC'] = abs(df['adjclose'] - df['adjclose'].shift(1));
-    df['LIN'] = abs(((df['adjclose'].shift(2) - df['adjclose']) / 2.0) / (df['adjclose'].shift(1) - df['adjclose']))
-    df['LIN25'] = df['LIN'].rolling(window=25,min_periods=1).mean()
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.fillna(0)
 
@@ -283,16 +306,20 @@ def load_data(TICKER, n_steps=50, scale=True, shuffle=True, lookup_step=1, split
             shuffle_in_unison(result["X_test"], result["y_test"])
     else:    
         # split the dataset randomly
-        result["X_train"], result["X_test"], result["y_train"], result["y_test"] = train_test_split(X, y, 
+        try:
+            result["X_train"], result["X_test"], result["y_train"], result["y_test"] = train_test_split(X, y, 
                                                                                 test_size=test_size, shuffle=shuffle)
+        except:
+            return
 
-    # get the list of test set dates
-    dates = result["X_test"][:, -1, -1]
-    # retrieve test features from the original dataframe
-    result["test_df"] = result["df"].loc[dates]
-    # remove dates from the training/testing sets & convert to float32
-    result["X_train"] = result["X_train"][:, :, :len(feature_columns)].astype(np.float32)
-    result["X_test"] = result["X_test"][:, :, :len(feature_columns)].astype(np.float32)
+        # get the list of test set dates
+        dates = result["X_test"][:, -1, -1]
+        # retrieve test features from the original dataframe
+        result["test_df"] = result["df"].loc[dates]
+        # remove dates from the training/testing sets & convert to float32
+        result["X_train"] = result["X_train"][:, :, :len(feature_columns)].astype(np.float32)
+        result["X_test"] = result["X_test"][:, :, :len(feature_columns)].astype(np.float32)
+
 
     return result
     

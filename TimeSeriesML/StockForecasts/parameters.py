@@ -4,7 +4,7 @@ from tensorflow.keras.layers import LSTM
 
 
 # Window size or the sequence length
-N_STEPS = 50
+N_STEPS = 60
 # Lookup step, 1 is the next day
 LOOKUP_STEP = 5
 
@@ -20,11 +20,12 @@ shuffle_str = f"sh-{int(SHUFFLE)}"
 SPLIT_BY_DATE = False
 split_by_date_str = f"sbd-{int(SPLIT_BY_DATE)}"
 
-# test ratio size, 0.2 is 20%
-TEST_SIZE = 0.3
+# test ratio size, 0.2 is 20% (80/20 rule)
+TEST_SIZE = 0.2
 # features to use
-FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low", "close", "OBV", "SMAFast", "SMASlow", "ROC10", "ROC25", "perc1c2"]
-MA_PERIODS = [7, 20, 50]
+#FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low", "close", "sma12", "sma173", "MACD", "momentum", "OBVFast", "OBVSlow", "SMAVol20", "cumSumOBVFastSlow", "dCumSumOBVFastSlow"]
+FEATURE_COLUMNS = ["adjclose", "volume", "open", "high", "low", "close", "perc1c2", "percc1", "ema1", "ema2", "ema3", "in_uptrend", "kst", "ROC10", "SMAVol20", "sma20","wema1", "wema2", "wema3", "momentum", "volmom", "rsi", "MACD", "SMArsi", "drsi"]
+MA_PERIODS = []
 # date now
 date_now = time.strftime("%Y-%m")
 
@@ -34,7 +35,7 @@ N_LAYERS = 4
 # LSTM cell
 CELL = LSTM
 # 256 LSTM neurons
-UNITS = 32
+UNITS = 16
 # 40% dropout
 DROPOUT = 0.4
 # whether to use bidirectional RNNs
